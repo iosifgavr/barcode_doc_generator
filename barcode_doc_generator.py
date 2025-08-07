@@ -8,15 +8,14 @@ import barcode
 from barcode.writer import ImageWriter
 from PIL import Image
 
-
 app = Flask(__name__)
 
 # HTML frontend
 HTML = """
 <!DOCTYPE html>
-<html lang=\"en\">
+<html lang="en">
 <head>
-    <meta charset=\"UTF-8\">
+    <meta charset="UTF-8">
     <title>Δημιουργία Barcode</title>
     <style>
         body {
@@ -26,7 +25,8 @@ HTML = """
             padding: 20px;
             background-image: url('/static/background.jpg');
             background-size: cover;
-            background-repeat: repeat;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
         }
         #logo {
             position: fixed;
@@ -62,19 +62,19 @@ HTML = """
 <body>
 <img src="/static/logo.png" alt="Logo" id="logo" />
 <h2>Καταχώριση Προϊόντων</h2>
-<form id=\"productForm\">
-    <input type=\"text\" id=\"barcode\" placeholder=\"Barcode\" required><br>
-    <input type=\"text\" id=\"description\" placeholder=\"Περιγραφή\" required><br>
-    <input type=\"text\" id=\"code\" placeholder=\"7ψήφιος Κωδικός SAP\" maxlength=\"7\" required><br>
-    <button type=\"submit\">Προσθήκη</button>
+<form id="productForm">
+    <input type="text" id="barcode" placeholder="Barcode" required><br>
+    <input type="text" id="description" placeholder="Περιγραφή" required><br>
+    <input type="text" id="code" placeholder="7ψήφιος Κωδικός SAP" maxlength="7" required><br>
+    <button type="submit">Προσθήκη</button>
 </form>
-<table id=\"productsTable\">
+<table id="productsTable">
     <thead>
         <tr><th>Barcode</th><th>Περιγραφή</th><th>Κωδικός SAP</th><th>Ενέργειες</th></tr>
     </thead>
     <tbody></tbody>
 </table>
-<button onclick=\"downloadDoc()\">Κατεβάστε .doc</button>
+<button onclick="downloadDoc()">Κατεβάστε .doc</button>
 <script>
     const form = document.getElementById('productForm');
     const table = document.getElementById('productsTable').querySelector('tbody');
@@ -107,8 +107,8 @@ HTML = """
                 <td>${item.description}</td>
                 <td>${item.code}</td>
                 <td>
-                    <button onclick=\"editProduct(${index})\">✏️</button>
-                    <button onclick=\"deleteProduct(${index})\">🗑️</button>
+                    <button onclick="editProduct(${index})">✏️</button>
+                    <button onclick="deleteProduct(${index})">🗑️</button>
                 </td>`;
             table.appendChild(row);
         });
@@ -157,7 +157,6 @@ def generate_doc():
     products = data.get('products', [])
 
     doc = Document()
-
     section = doc.sections[-1]
     section.page_height = Mm(150)
     section.page_width = Mm(100)
@@ -171,41 +170,33 @@ def generate_doc():
         if idx > 0:
             doc.add_page_break()
 
-        # Δημιουργία Barcode και αποθήκευση
+        # Δημιουργία barcode και αποθήκευση ως εικόνα
         barcode_stream = BytesIO()
         code128 = barcode.get('code128', item['barcode'], writer=ImageWriter())
         code128.write(barcode_stream)
         barcode_stream.seek(0)
 
-        #Αποθήκευση barcode σαν PIL γιατι το python-docx αρνήτε για κάποιο λόγο να την πάρει σαν κάτι άλλο
-        img = Image.open(barcode_stream)
+        # Φορτώνουμε το barcode ως εικόνα και κάνουμε copy για σιγουριά
+        img = Image.open(barcode_stream).copy()
+
         img_buffer = BytesIO()
         img.save(img_buffer, format="PNG")
         img_buffer.seek(0)
 
-        # Προσθήκη εικόνας στο doc
-        doc.add_picture(img_buffer, width=Mm(60))
-
-        # Προσθήκη υπόλοιπων 
-        doc.add_paragraph(item['description'])
-        doc.add_paragraph(item['code'])
-
-        # Κεντράρισμα barcode
+        # Κεντραρισμένο barcode
         barcode_paragraph = doc.add_paragraph()
-        barcode_run = barcode_paragraph.add_run()
         barcode_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        barcode_run.add_picture(img_buffer, width=Mm(60))
-        
+        barcode_paragraph.add_run().add_picture(img_buffer, width=Mm(60))
 
-        # Κεντράρισμα Κειμένων
-        desc_para = doc.add_paragraph(item['description'])
-        desc_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Κεντραρισμένο description
+        desc_paragraph = doc.add_paragraph(item['description'])
+        desc_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        code_para = doc.add_paragraph(item['code'])
-        code_para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Κεντραρισμένος SAP code
+        code_paragraph = doc.add_paragraph(item['code'])
+        code_paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-
-    # Αποθήκευσh buffer
+    # Αποθήκευση σε memory buffer
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
@@ -221,4 +212,3 @@ if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
-
