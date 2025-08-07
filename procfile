@@ -1,1 +1,1 @@
-web: python barcode_doc_generator.py
+web: gunicorn barcode_doc_generator:app
