@@ -2,5 +2,6 @@ setuptools>=68.0.0
 wheel
 Flask==2.3.2
 python-barcode==0.14.0
-Pillow==10.0.1
+Pillow==9.5.0
 python-docx==0.8.11
+
