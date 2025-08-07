@@ -3,9 +3,10 @@ services:
     name: barcode-doc-generator
     env: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: python barcode_doc_generator.py
-    autoDeploy: true
+    buildCommand: |
+      pip install --upgrade pip setuptools wheel
+      pip install -r requirements.txt
+    startCommand: python app.py
     envVars:
-      - key: FLASK_ENV
-        value: development
+      - key: PYTHON_VERSION
+        value: 3.11.4
